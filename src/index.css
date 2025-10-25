@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Transiciones suaves para el tema */
+* {
+	transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+/* Asegurar que el body tenga transición */
+body {
+	font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	line-height: 1.6;
+	transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+/* Mejorar la legibilidad en dark mode */
+.dark {
+	color-scheme: dark;
+}
+
+/* Estilos personalizados para componentes */
+.btn-primary {
+	@apply bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.card {
+	@apply bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700;
+}
