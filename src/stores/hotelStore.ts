@@ -13,7 +13,6 @@ interface HotelState {
 	currentPage: number;
 	sortBy: string;
 
-	// Actions
 	setHotels: (hotels: Hotel[]) => void;
 	setSelectedHotel: (hotel: Hotel | null) => void;
 	setSearchFilters: (filters: Partial<SearchFilters>) => void;
@@ -50,40 +49,26 @@ export const useHotelStore = create<HotelState>((set, get) => ({
 	setSearchFilters: (filters) =>
 		set((state) => ({
 			searchFilters: { ...state.searchFilters, ...filters },
-			currentPage: 1, // Reset to first page when filters change
+			currentPage: 1,
 		})),
 
 	searchHotels: async (page = 1) => {
 		set({ loading: true, error: null });
 		try {
 			const filters = get().searchFilters;
-			const sortBy = get().sortBy;
+			console.log("Buscando hoteles con filtros:", filters);
 
-			// En una implementación real, estos parámetros irían a la API
-			const searchParams = {
-				...filters,
-				page,
-				sortBy,
-				limit: 12,
-			};
-
-			const hotels = await hotelAPI.search(searchParams);
-
-			// Mock data para la paginación - en realidad esto vendría de la API
-			const mockHotels = Array.from({ length: 12 }, (_, index) => ({
-				...(hotels[0] || getMockHotel()),
-				id: `hotel-${page}-${index}`,
-				pricePerNight: Math.floor(Math.random() * 300) + 50,
-				rating: Number((Math.random() * 2 + 3).toFixed(1)),
-			}));
+			const hotels = await hotelAPI.search(filters);
+			console.log("Hoteles encontrados:", hotels);
 
 			set({
-				hotels: mockHotels,
-				totalResults: 124, // Mock total
+				hotels,
+				totalResults: hotels.length, // Tu backend debería devolver esto
 				currentPage: page,
 				loading: false,
 			});
 		} catch (error: any) {
+			console.error("Error en búsqueda:", error);
 			set({
 				error: error.response?.data?.message || "Error al buscar hoteles",
 				loading: false,
@@ -100,7 +85,7 @@ export const useHotelStore = create<HotelState>((set, get) => ({
 			return hotel;
 		} catch (error: any) {
 			set({
-				error: error.response?.data?.message || "Failed to load hotel",
+				error: error.response?.data?.message || "Error al cargar hotel",
 				loading: false,
 			});
 			return null;
@@ -114,7 +99,7 @@ export const useHotelStore = create<HotelState>((set, get) => ({
 			set({ featuredHotels, loading: false });
 		} catch (error: any) {
 			set({
-				error: error.response?.data?.message || "Failed to load featured hotels",
+				error: error.response?.data?.message || "Error al cargar hoteles destacados",
 				loading: false,
 			});
 		}
@@ -124,24 +109,3 @@ export const useHotelStore = create<HotelState>((set, get) => ({
 	setSortBy: (sortBy) => set({ sortBy, currentPage: 1 }),
 	setPage: (page) => set({ currentPage: page }),
 }));
-
-// Helper function for mock data
-function getMockHotel(): Hotel {
-	return {
-		id: "1",
-		name: "Hotel Ejemplo",
-		description: "Un hotel de ejemplo",
-		address: "123 Calle Principal",
-		city: "Ciudad Ejemplo",
-		country: "País Ejemplo",
-		latitude: 0,
-		longitude: 0,
-		pricePerNight: 100,
-		rating: 4.5,
-		amenities: ["wifi", "pool"],
-		images: ["https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"],
-		roomType: "Standard",
-		maxGuests: 2,
-		available: true,
-	};
-}

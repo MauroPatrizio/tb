@@ -63,21 +63,23 @@ interface HotelsMapProps {
 export const HotelsMap: React.FC<HotelsMapProps> = ({ hotels, onHotelClick, height = "500px" }) => {
 	const { viewport } = useMapStore();
 
-	// Generar coordenadas realistas alrededor de Mendoza
-	const getHotelCoordinates = (hotel: Hotel, index: number): [number, number] => {
-		// Coordenadas alrededor de Mendoza, Argentina
+	// Usar coordenadas reales del hotel
+	const getHotelCoordinates = (hotel: Hotel): [number, number] => {
+		// Si el hotel tiene coordenadas reales, usarlas
+		if (hotel.latitude && hotel.longitude) {
+			return [hotel.latitude, hotel.longitude];
+		}
+
+		// Fallback: coordenadas alrededor de Mendoza
 		const mendozaAreas: [number, number][] = [
 			[-32.89084, -68.82717], // Centro de Mendoza
 			[-32.88084, -68.83717], // Este
 			[-32.90084, -68.81717], // Oeste
-			[-32.88584, -68.84717], // Sur
-			[-32.87584, -68.80717], // Norte
 		];
 
-		const areaIndex = index % mendozaAreas.length;
+		const areaIndex = Math.floor(Math.random() * mendozaAreas.length);
 		const baseCoord = mendozaAreas[areaIndex];
 
-		// Pequeña variación para que no se superpongan
 		const latVariation = (Math.random() - 0.5) * 0.01;
 		const lngVariation = (Math.random() - 0.5) * 0.01;
 
@@ -116,8 +118,8 @@ export const HotelsMap: React.FC<HotelsMapProps> = ({ hotels, onHotelClick, heig
 
 				<MapController />
 
-				{hotels.map((hotel, index) => {
-					const coordinates = getHotelCoordinates(hotel, index);
+				{hotels.map((hotel) => {
+					const coordinates = getHotelCoordinates(hotel);
 
 					return (
 						<Marker
