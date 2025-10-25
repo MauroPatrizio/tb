@@ -1,11 +1,27 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdvancedSearchFilters } from "../components/AdvancedSearchFilters";
 import { HotelCard } from "../components/HotelCard";
+import { Pagination } from "../components/Pagination";
+import { SkeletonLoader } from "../components/SkeletonLoader";
+import { HotelsMap } from "../components/HotelsMap";
+import { MapToggle } from "../components/MapToggle";
+import { MapSearch } from "../components/MapSearch";
 import { useHotelStore } from "../stores/hotelStore";
-import { SkeletonLoader } from "../components/LoadingSpinner";
+import { useMapStore } from "../stores/mapStore";
 
 export const Home: React.FC = () => {
-	const { hotels, featuredHotels, loading, searchHotels, getFeaturedHotels } = useHotelStore();
+	const {
+		hotels,
+		featuredHotels,
+		loading,
+		searchHotels,
+		getFeaturedHotels,
+		totalResults,
+		currentPage,
+	} = useHotelStore();
+	const { isMapVisible } = useMapStore();
+	const navigate = useNavigate();
 	const [searchPerformed, setSearchPerformed] = useState(false);
 
 	useEffect(() => {
@@ -14,7 +30,7 @@ export const Home: React.FC = () => {
 
 	const handleSearch = async () => {
 		setSearchPerformed(true);
-		await searchHotels();
+		await searchHotels(1);
 	};
 
 	const features = [
@@ -60,133 +76,150 @@ export const Home: React.FC = () => {
 			{/* Search Section */}
 			<section className="bg-white dark:bg-gray-800 -mt-8 relative z-10">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-						<AdvancedSearchFilters onSearch={handleSearch} />
-					</div>
+					<AdvancedSearchFilters onSearch={handleSearch} />
 				</div>
 			</section>
 
-			{/* Features Section */}
-			<section className="py-16 bg-white dark:bg-gray-800">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div className="text-center mb-12">
-						<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-							¿Por qué elegirnos?
-						</h2>
-						<p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-							Ofrecemos la mejor experiencia de reserva con beneficios exclusivos para
-							nuestros usuarios
-						</p>
-					</div>
-
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-						{features.map((feature, index) => (
-							<div
-								key={index}
-								className="text-center p-6"
-							>
-								<div className="text-4xl mb-4">{feature.icon}</div>
-								<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-									{feature.title}
-								</h3>
-								<p className="text-gray-600 dark:text-gray-300">
-									{feature.description}
+			{/* Search Results */}
+			{searchPerformed && (
+				<section className="py-8 bg-gray-50 dark:bg-gray-900">
+					<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+						{/* Results Header */}
+						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+							<div>
+								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+									Resultados de Búsqueda
+								</h2>
+								<p className="text-gray-600 dark:text-gray-300 mt-1">
+									{totalResults > 0 ? (
+										<>
+											Encontramos{" "}
+											<span className="font-semibold text-orange-600 dark:text-orange-400">
+												{totalResults}
+											</span>{" "}
+											hoteles
+											{currentPage > 1 && ` - Página ${currentPage}`}
+										</>
+									) : (
+										"No encontramos hoteles que coincidan con tu búsqueda"
+									)}
 								</p>
 							</div>
-						))}
-					</div>
-				</div>
-			</section>
 
-			{/* Featured Hotels */}
-			{featuredHotels.length > 0 && !searchPerformed && (
-				<section className="py-16 bg-gray-50 dark:bg-gray-900">
-					<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-						<div className="text-center mb-12">
-							<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-								Hoteles Destacados
-							</h2>
-							<p className="text-lg text-gray-600 dark:text-gray-300">
-								Descubre nuestros hoteles mejor calificados
-							</p>
+							{/* Map Toggle */}
+							<div className="flex items-center space-x-4 mt-4 sm:mt-0">
+								<MapSearch />
+								<MapToggle />
+							</div>
 						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-							{featuredHotels.slice(0, 6).map((hotel) => (
-								<HotelCard
-									key={hotel.id}
-									hotel={hotel}
+						{/* Content based on map visibility */}
+						{isMapVisible ? (
+							/* Vista Mapa */
+							<div className="mb-8">
+								<HotelsMap
+									hotels={hotels}
+									height="600px"
+									onHotelClick={(hotel) => navigate(`/hotel/${hotel.id}`)}
 								/>
-							))}
-						</div>
+							</div>
+						) : (
+							/* Vista Lista */
+							<>
+								{loading ? (
+									<SkeletonLoader />
+								) : hotels.length > 0 ? (
+									<>
+										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+											{hotels.map((hotel) => (
+												<HotelCard
+													key={hotel.id}
+													hotel={hotel}
+												/>
+											))}
+										</div>
+										<Pagination />
+									</>
+								) : (
+									<div className="text-center py-12">
+										<div className="text-gray-400 text-6xl mb-4">🏨</div>
+										<h3 className="text-2xl font-medium text-gray-900 dark:text-white mb-4">
+											No encontramos hoteles
+										</h3>
+										<p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto text-lg mb-6">
+											Intenta ajustar tus filtros de búsqueda o explorar
+											destinos populares
+										</p>
+										<button
+											onClick={() => setSearchPerformed(false)}
+											className="bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+										>
+											Ver Hoteles Destacados
+										</button>
+									</div>
+								)}
+							</>
+						)}
 					</div>
 				</section>
 			)}
 
-			{/* Search Results */}
-			{searchPerformed && (
-				<section className="py-16 bg-gray-50 dark:bg-gray-900">
-					<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-						<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
-							Resultados de Búsqueda
-							{hotels.length > 0 && (
-								<span className="text-orange-600 dark:text-orange-400">
-									{" "}
-									({hotels.length} encontrados)
-								</span>
-							)}
-						</h2>
+			{/* Featured Hotels */}
+			{!searchPerformed && (
+				<>
+					<section className="py-16 bg-white dark:bg-gray-800">
+						<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+							<div className="text-center mb-12">
+								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+									¿Por qué elegirnos?
+								</h2>
+								<p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+									Ofrecemos la mejor experiencia de reserva con beneficios
+									exclusivos para nuestros usuarios
+								</p>
+							</div>
 
-						{loading ? (
-							<SkeletonLoader />
-						) : (
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+								{features.map((feature, index) => (
+									<div
+										key={index}
+										className="text-center p-6"
+									>
+										<div className="text-4xl mb-4">{feature.icon}</div>
+										<h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+											{feature.title}
+										</h3>
+										<p className="text-gray-600 dark:text-gray-300">
+											{feature.description}
+										</p>
+									</div>
+								))}
+							</div>
+						</div>
+					</section>
+
+					<section className="py-16 bg-gray-50 dark:bg-gray-900">
+						<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+							<div className="text-center mb-12">
+								<h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+									Hoteles Destacados
+								</h2>
+								<p className="text-lg text-gray-600 dark:text-gray-300">
+									Descubre nuestros hoteles mejor calificados
+								</p>
+							</div>
+
 							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-								{hotels.map((hotel) => (
+								{featuredHotels.slice(0, 6).map((hotel) => (
 									<HotelCard
 										key={hotel.id}
 										hotel={hotel}
 									/>
 								))}
 							</div>
-						)}
-
-						{!loading && hotels.length === 0 && (
-							<div className="text-center py-12">
-								<div className="text-gray-400 text-6xl mb-4">🏨</div>
-								<h3 className="text-2xl font-medium text-gray-900 dark:text-white mb-4">
-									No encontramos hoteles
-								</h3>
-								<p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto text-lg">
-									Intenta ajustar tus filtros de búsqueda
-								</p>
-							</div>
-						)}
-					</div>
-				</section>
-			)}
-
-			{/* CTA Section */}
-			{!searchPerformed && (
-				<section className="py-16 bg-gray-900 text-white">
-					<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-						<h2 className="text-3xl font-bold mb-4">
-							¿Listo para tu próxima aventura?
-						</h2>
-						<p className="text-xl mb-8 text-gray-300">
-							Únete a millones de viajeros que confían en nosotros
-						</p>
-						<button
-							onClick={() =>
-								document
-									.getElementById("search-section")
-									?.scrollIntoView({ behavior: "smooth" })
-							}
-							className="bg-orange-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-orange-700 transition-colors"
-						>
-							Buscar Hoteles
-						</button>
-					</div>
-				</section>
+						</div>
+					</section>
+				</>
 			)}
 		</div>
 	);

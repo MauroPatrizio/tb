@@ -99,3 +99,34 @@ export interface ErrorResponse {
 	code: string;
 	details?: any;
 }
+
+export interface SearchParams extends SearchFilters {
+	page?: number;
+	limit?: number;
+	sortBy?: string;
+}
+
+export interface SearchResponse {
+	hotels: Hotel[];
+	total: number;
+	page: number;
+	totalPages: number;
+}
+
+export interface MapBounds {
+	north: number;
+	south: number;
+	east: number;
+	west: number;
+}
+
+export interface MapViewport {
+	center: [number, number];
+	zoom: number;
+}
+
+export interface HotelWithLocation extends Hotel {
+	latitude: number;
+	longitude: number;
+	distance?: number;
+}

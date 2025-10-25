@@ -5,7 +5,7 @@ import { useHotelStore } from "../stores/hotelStore";
 import type { Hotel } from "../types";
 import { MapPinIcon, StarIcon, WifiIcon } from "@heroicons/react/24/solid";
 import { PhotoGallery } from "../components/PhotoGallery";
-import { HotelMap } from "../components/HotelMap";
+import { HotelDetailMap } from "../components/HotelDetailMap";
 import { BookingWidget } from "../components/BookingWidget";
 import { ReviewSection } from "./ReviewSection";
 
@@ -103,7 +103,7 @@ export const HotelDetail: React.FC = () => {
 						<div className="bg-white rounded-lg shadow-md p-6">
 							<h2 className="text-xl font-semibold mb-4">Location</h2>
 							<div className="h-64 rounded-lg overflow-hidden">
-								<HotelMap hotel={hotel} />
+								<HotelDetailMap hotel={hotel} />
 							</div>
 							<ReviewSection hotelId={hotel.id} />
 						</div>

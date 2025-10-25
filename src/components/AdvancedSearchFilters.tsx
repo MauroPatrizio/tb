@@ -58,6 +58,14 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 	};
 
 	const handleCheckOutClick = () => {
+		if (!searchFilters.checkIn) {
+			// Si no hay check-in seleccionado, mostrar mensaje y abrir check-in primero
+			setActiveFilter("checkIn");
+			setTimeout(() => {
+				checkInRef.current?.setOpen(true);
+			}, 100);
+			return;
+		}
 		setActiveFilter("checkOut");
 		setTimeout(() => {
 			checkOutRef.current?.setOpen(true);
@@ -68,6 +76,17 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 		setSearchFilters({
 			[field]: date,
 		});
+
+		// Si se selecciona check-in y ya hay un check-out anterior, validar que check-out sea posterior
+		if (field === "checkIn" && date && searchFilters.checkOut) {
+			const nextDay = new Date(date);
+			nextDay.setDate(nextDay.getDate() + 1);
+
+			if (searchFilters.checkOut <= nextDay) {
+				// Si check-out es el mismo día o el día siguiente a check-in, limpiar check-out
+				setSearchFilters({ checkOut: null });
+			}
+		}
 	};
 
 	const handleGuestsClick = () => {
@@ -76,6 +95,44 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 
 	const handleGuestsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		setSearchFilters({ guests: parseInt(e.target.value) });
+	};
+
+	// Función para calcular la fecha mínima de check-out (check-in + 1 día)
+	const getMinCheckOutDate = () => {
+		if (!searchFilters.checkIn) return new Date();
+
+		const minDate = new Date(searchFilters.checkIn);
+		minDate.setDate(minDate.getDate() + 1);
+		return minDate;
+	};
+
+	// Efecto para resetear check-out si se elimina check-in
+	useEffect(() => {
+		if (!searchFilters.checkIn && searchFilters.checkOut) {
+			setSearchFilters({ checkOut: null });
+		}
+	}, [searchFilters.checkIn, searchFilters.checkOut, setSearchFilters]);
+
+	const getCheckOutPlaceholder = () => {
+		if (!searchFilters.checkIn) {
+			return "Primero selecciona check-in";
+		}
+		return "Agregar fecha";
+	};
+
+	const getCheckOutClassName = () => {
+		const baseClasses =
+			"filter-item flex-1 px-4 py-3.5 cursor-pointer rounded-xl transition-all duration-200 relative flex flex-col justify-center min-h-16 ";
+
+		if (activeFilter === "checkOut") {
+			return baseClasses + "bg-gray-50 dark:bg-gray-700 border-2 border-orange-500";
+		}
+
+		if (!searchFilters.checkIn) {
+			return baseClasses + "border-2 border-transparent opacity-60 cursor-not-allowed";
+		}
+
+		return baseClasses + "hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-transparent";
 	};
 
 	useEffect(() => {
@@ -114,7 +171,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 					<div
 						className={`filter-item flex-1 px-4 py-3.5 cursor-pointer rounded-xl transition-all duration-200 relative flex flex-col justify-center min-h-16 ${
 							activeFilter === "destination"
-								? "bg-gray-50 dark:bg-gray-700 border-2 border-primary-600"
+								? "bg-gray-50 dark:bg-gray-700 border-2 border-orange-500"
 								: "hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-transparent"
 						}`}
 						onClick={handleDestinationClick}
@@ -148,7 +205,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 					<div
 						className={`filter-item flex-1 px-4 py-3.5 cursor-pointer rounded-xl transition-all duration-200 relative flex flex-col justify-center min-h-16 ${
 							activeFilter === "checkIn"
-								? "bg-gray-50 dark:bg-gray-700 border-2 border-primary-600"
+								? "bg-gray-50 dark:bg-gray-700 border-2 border-orange-500"
 								: "hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-transparent"
 						}`}
 						onClick={handleCheckInClick}
@@ -189,17 +246,13 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 
 					{/* Check-Out */}
 					<div
-						className={`filter-item flex-1 px-4 py-3.5 cursor-pointer rounded-xl transition-all duration-200 relative flex flex-col justify-center min-h-16 ${
-							activeFilter === "checkOut"
-								? "bg-gray-50 dark:bg-gray-700 border-2 border-primary-600"
-								: "hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-transparent"
-						}`}
+						className={getCheckOutClassName()}
 						onClick={handleCheckOutClick}
 					>
 						<div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
 							CHECK-OUT
 						</div>
-						{activeFilter === "checkOut" ? (
+						{activeFilter === "checkOut" && searchFilters.checkIn ? (
 							<DatePicker
 								ref={checkOutRef}
 								selected={searchFilters.checkOut}
@@ -207,7 +260,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 								selectsEnd
 								startDate={searchFilters.checkIn}
 								endDate={searchFilters.checkOut}
-								minDate={searchFilters.checkIn || new Date()}
+								minDate={getMinCheckOutDate()} // ✅ Ahora usa la fecha mínima calculada
 								customInput={<CustomInput />}
 								dateFormat="dd/MM/yyyy"
 								placeholderText="Seleccionar fecha"
@@ -217,10 +270,16 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 								popperPlacement="bottom-start"
 							/>
 						) : (
-							<div className="text-sm font-normal text-gray-900 dark:text-white truncate">
+							<div
+								className={`text-sm font-normal truncate ${
+									!searchFilters.checkIn
+										? "text-gray-400 dark:text-gray-500"
+										: "text-gray-900 dark:text-white"
+								}`}
+							>
 								{searchFilters.checkOut
 									? formatDate(searchFilters.checkOut)
-									: "Agregar fecha"}
+									: getCheckOutPlaceholder()}
 							</div>
 						)}
 					</div>
@@ -234,7 +293,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 					<div
 						className={`filter-item flex-1 px-4 py-3.5 cursor-pointer rounded-xl transition-all duration-200 relative flex flex-col justify-center min-h-16 ${
 							activeFilter === "guests"
-								? "bg-gray-50 dark:bg-gray-700 border-2 border-primary-600"
+								? "bg-gray-50 dark:bg-gray-700 border-2 border-orange-500"
 								: "hover:bg-gray-50 dark:hover:bg-gray-700 border-2 border-transparent"
 						}`}
 						onClick={handleGuestsClick}
@@ -276,7 +335,7 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 					{/* Botón de búsqueda */}
 					<button
 						onClick={handleSearch}
-						className="flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-3 rounded-xl font-semibold transition-colors duration-200 ml-2 min-w-[100px] border-2 border-transparent"
+						className="flex items-center justify-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-xl font-semibold transition-colors duration-200 ml-2 min-w-[100px] border-2 border-transparent"
 					>
 						<MagnifyingGlassIcon className="h-4 w-4" />
 						<span>Buscar</span>
@@ -284,145 +343,145 @@ export const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ on
 				</div>
 			</div>
 
-			{/* Estilos para el DatePicker - Mismo diseño para light y dark */}
+			{/* Estilos para el DatePicker */}
 			<style>{`
-				.react-datepicker-custom {
-					font-family: inherit;
-					border: 1px solid #e5e7eb;
-					border-radius: 0.75rem;
-					box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-					z-index: 10000 !important;
-					background-color: white;
-				}
+        .react-datepicker-custom {
+          font-family: inherit;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.75rem;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+          z-index: 10000 !important;
+          background-color: white;
+        }
 
-				.react-datepicker-popper {
-					z-index: 10000 !important;
-				}
+        .react-datepicker-popper {
+          z-index: 10000 !important;
+        }
 
-				.react-datepicker-popper[data-placement^="bottom"] {
-					padding-top: 8px !important;
-				}
+        .react-datepicker-popper[data-placement^="bottom"] {
+          padding-top: 8px !important;
+        }
 
-				.react-datepicker__triangle {
-					display: none;
-				}
+        .react-datepicker__triangle {
+          display: none;
+        }
 
-				.react-datepicker-custom .react-datepicker__header {
-					background-color: #f9fbf9ff;
-					border-bottom: 1px solid #ebe5e5ff;
-					border-top-left-radius: 0.75rem;
-					border-top-right-radius: 0.75rem;
-				}
+        .react-datepicker-custom .react-datepicker__header {
+          background-color: #f9fbf9ff;
+          border-bottom: 1px solid #ebe5e5ff;
+          border-top-left-radius: 0.75rem;
+          border-top-right-radius: 0.75rem;
+        }
 
-				.react-datepicker-custom .react-datepicker__current-month {
-					color: #111827;
-					font-weight: 600;
-				}
+        .react-datepicker-custom .react-datepicker__current-month {
+          color: #111827;
+          font-weight: 600;
+        }
 
-				.react-datepicker-custom .react-datepicker__day-name {
-					color: #6b7280;
-					font-weight: 500;
-				}
+        .react-datepicker-custom .react-datepicker__day-name {
+          color: #6b7280;
+          font-weight: 500;
+        }
 
-				.react-datepicker-custom .react-datepicker__day {
-					color: #374151;
-					border-radius: 0.375rem;
-				}
+        .react-datepicker-custom .react-datepicker__day {
+          color: #374151;
+          border-radius: 0.375rem;
+        }
 
-				.react-datepicker-custom .react-datepicker__day:hover {
-					background-color: #f3f4f6;
-				}
+        .react-datepicker-custom .react-datepicker__day:hover {
+          background-color: #f3f4f6;
+        }
 
-				.react-datepicker-custom .react-datepicker__day--selected {
-					background-color: #ea580c !important;
-					color: white !important;
-				}
+        .react-datepicker-custom .react-datepicker__day--selected {
+          background-color: #ea580c !important;
+          color: white !important;
+        }
 
-				.react-datepicker-custom .react-datepicker__day--keyboard-selected {
-					background-color: #fed7aa !important;
-					color: #ea580c !important;
-				}
+        .react-datepicker-custom .react-datepicker__day--keyboard-selected {
+          background-color: #fed7aa !important;
+          color: #ea580c !important;
+        }
 
-				.react-datepicker-custom .react-datepicker__day--in-range {
-					background-color: #ffedd5 !important;
-					color: #ea580c !important;
-				}
+        .react-datepicker-custom .react-datepicker__day--in-range {
+          background-color: #ffedd5 !important;
+          color: #ea580c !important;
+        }
 
-				/* Días pasados */
-				.react-datepicker-custom .react-datepicker__day--disabled {
-					color: #9ca3af !important;
-					background-color: #f9fafb !important;
-					cursor: not-allowed !important;
-				}
+        /* Días pasados y días no disponibles */
+        .react-datepicker-custom .react-datepicker__day--disabled {
+          color: #9ca3af !important;
+          background-color: #f9fafb !important;
+          cursor: not-allowed !important;
+        }
 
-				.react-datepicker-custom .react-datepicker__day--outside-month {
-					color: #d1d5db !important;
-				}
+        .react-datepicker-custom .react-datepicker__day--outside-month {
+          color: #d1d5db !important;
+        }
 
-				.react-datepicker-custom .react-datepicker__navigation-icon::before {
-					border-color: #806b6bff;
-				}
+        .react-datepicker-custom .react-datepicker__navigation-icon::before {
+          border-color: #806b6bff;
+        }
 
-				/* ========== MODO DARK ========== */
-				.dark .react-datepicker-custom {
-					background-color: white !important;
-					border-color: #ebe7e5ff !important;
-				}
+        /* ========== MODO DARK ========== */
+        .dark .react-datepicker-custom {
+          background-color: white !important;
+          border-color: #ebe7e5ff !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__header {
-					background-color: #f9fafb !important;
-					border-color: #ebe7e5ff !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__header {
+          background-color: #f9fafb !important;
+          border-color: #ebe7e5ff !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__current-month {
-					color: #111827 !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__current-month {
+          color: #111827 !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day-name {
-					color: #6b7280 !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day-name {
+          color: #6b7280 !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day {
-					color: #374151 !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day {
+          color: #374151 !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day:hover {
-					background-color: #f3f4f6 !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day:hover {
+          background-color: #f3f4f6 !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day--selected {
-					background-color: #ea580c !important;
-					color: white !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day--selected {
+          background-color: #ea580c !important;
+          color: white !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day--keyboard-selected {
-					background-color: #fed7aa !important;
-					color: #ea580c !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day--keyboard-selected {
+          background-color: #fed7aa !important;
+          color: #ea580c !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day--in-range {
-					background-color: #ffedd5 !important;
-					color: #ea580c !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day--in-range {
+          background-color: #ffedd5 !important;
+          color: #ea580c !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day--disabled {
-					color: #9ca3af !important;
-					background-color: #f9fafb !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day--disabled {
+          color: #9ca3af !important;
+          background-color: #f9fafb !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__day--outside-month {
-					color: #d1d5db !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__day--outside-month {
+          color: #d1d5db !important;
+        }
 
-				.dark .react-datepicker-custom .react-datepicker__navigation-icon::before {
-					border-color: #6b7280 !important;
-				}
+        .dark .react-datepicker-custom .react-datepicker__navigation-icon::before {
+          border-color: #6b7280 !important;
+        }
 
-				/* Asegurar que el datepicker se muestre por encima de todo */
-				.react-datepicker-wrapper {
-					width: 100%;
-				}
-			`}</style>
+        /* Asegurar que el datepicker se muestre por encima de todo */
+        .react-datepicker-wrapper {
+          width: 100%;
+        }
+      `}</style>
 		</>
 	);
 };
